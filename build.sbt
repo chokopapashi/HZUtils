@@ -1,15 +1,15 @@
 name := "HZUtil"
 
-version := "1.2.0"
+version := "1.3.0"
 
 organization := "org.hirosezouen"
 
-scalaVersion := "2.10.0"
+scalaVersion := "2.10.1"
 
-// Actor of Ver2.10.0 requires to add libraryDependencies explicitly
+// Actor of Ver2.10.1 requires to add libraryDependencies explicitly
 libraryDependencies <+= scalaVersion { "org.scala-lang" % "scala-actors" % _ }
 
-// Reflect of Ver2.10.0 requires to add libraryDependencies explicitly
+// Reflect of Ver2.10.1 requires to add libraryDependencies explicitly
 libraryDependencies <+= scalaVersion { "org.scala-lang" % "scala-reflect" % _ }
 
 libraryDependencies += "org.scalatest" % "scalatest_2.10" % "1.9.1" % "test"
