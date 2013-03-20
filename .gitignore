@@ -3,6 +3,7 @@
 *.swo
 *.swn
 
+.DS_Store
 .svn/
 *.lnk
 logback.xml
