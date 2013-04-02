@@ -92,5 +92,9 @@ package object hzutil {
 
         (buffer ++= strBuilder.mkString.getBytes).toArray
     }
+
+    def hexStr2byteArray(src: String): Array[Byte] = {
+        src.grouped(2).map(Integer.parseInt(_,16).toByte).toArray
+    }
 }
 
