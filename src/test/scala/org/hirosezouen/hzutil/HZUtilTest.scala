@@ -2,6 +2,8 @@ package org.hirosezouen.hzutil
 
 import java.io.ByteArrayOutputStream
 
+import java.nio.ByteBuffer
+
 import org.scalatest.FunSuite
 
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder
@@ -14,6 +16,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 import org.hirosezouen.hzutil.HZLog._
+import org.hirosezouen.hzutil.HZByteBufferUtil._
 
 class HZUtilTest extends FunSuite {
 
@@ -183,6 +186,93 @@ class HZUtilTest extends FunSuite {
 
         expectResult(TestKey.paths)(List("TestKey","TestKey.a","TestKey.b","TestKey.c","TestKey.c.d","TestKey.c.e","TestKey.c.f","TestKey.c.f.g","TestKey.c.f.h","TestKey.c.f.i"))
         expectResult(TestKey.paths((l: Key[_]) => l.isLeaf))(List("TestKey.a","TestKey.b","TestKey.c.d","TestKey.c.e","TestKey.c.f.g","TestKey.c.f.h","TestKey.c.f.i"))
+    }
+
+    test("HZByteBufferUtil:sputByteToBuffer") {
+        val data = new Array[Byte](6)
+        implicit val buffer = ByteBuffer.wrap(data)
+        putByteToBuffer(2,0xAB.toByte)
+
+        expectResult(0xAB.toByte)(buffer.get(2))
+    }
+
+    test("HZByteBufferUtil:getByteFromBuffer") {
+        val data = new Array[Byte](6)
+        implicit val buffer = ByteBuffer.wrap(data)
+        buffer.put(3,0xAB.toByte)
+        expectResult(0xAB.toByte)(getByteFromBuffer(3))
+    }
+
+    test("HZByteBufferUtil:putBytesToBuffer") {
+        val data = new Array[Byte](6)
+        implicit val buffer = ByteBuffer.wrap(data)
+        putBytesToBuffer(2,5,Array(0xAB,0xCD,0xEF).map(_.toByte))
+    
+        expectResult(0xAB.toByte)(buffer.get(2))
+        expectResult(0xCD.toByte)(buffer.get(3))
+        expectResult(0xEF.toByte)(buffer.get(4))
+    }
+
+    test("HZByteBufferUtil:getBytesFromBuffer") {
+        val data = new Array[Byte](6)
+        implicit val buffer = ByteBuffer.wrap(data)
+        buffer.position(3)
+        buffer.put(Array(0xAB,0xCD,0xEF).map(_.toByte))
+        
+        val outData = getBytesFromBuffer(3,6)
+        expectResult(0xAB.toByte)(outData(0))
+        expectResult(0xCD.toByte)(outData(1))
+        expectResult(0xEF.toByte)(outData(2))
+    }
+
+    test("HZByteBufferUtil:replaceBuffer") {
+        val data = new Array[Byte](6)
+        implicit val buffer = ByteBuffer.wrap(data)
+
+        replaceBuffer(Array(0xAB,0xCD,0xEF,0x01,0x02,0x03).map(_.toByte))
+
+        expectResult(0xAB.toByte)(data(0))
+        expectResult(0xCD.toByte)(data(1))
+        expectResult(0xEF.toByte)(data(2))
+        expectResult(0x01.toByte)(data(3))
+        expectResult(0x02.toByte)(data(4))
+        expectResult(0x03.toByte)(data(5))
+    }
+
+    test("HZByteBufferUtil:putBufferToBuffer") {
+        val data = new Array[Byte](6)
+        implicit val buffer = ByteBuffer.wrap(data)
+
+        val srcData = new Array[Byte](6) 
+        val srcBuffer = ByteBuffer.wrap(srcData)
+        srcBuffer.position(2)
+        srcBuffer.put(Array(0xAB,0xCD,0xEF).map(_.toByte))
+        srcBuffer.flip
+        srcBuffer.position(2)
+
+        putBufferToBuffer(2,5,srcBuffer)
+
+        expectResult(0x00.toByte)(data(0))
+        expectResult(0x00.toByte)(data(1))
+        expectResult(0xAB.toByte)(data(2))
+        expectResult(0xCD.toByte)(data(3))
+        expectResult(0xEF.toByte)(data(4))
+        expectResult(0x00.toByte)(data(5))
+    }
+
+
+    test("HZByteBufferUtil:getBufferFromBuffer") {
+        val data =  Array(0xAB,0xCD,0xEF,0x01,0x02,0x03).map(_.toByte)
+        implicit val buffer = ByteBuffer.wrap(data)
+
+        val dBuffer = getBufferFromBuffer(2,5)
+        dBuffer.clear
+        expectResult(3)(dBuffer.limit)
+        expectResult(3)(dBuffer.capacity)
+
+        expectResult(0xEF.toByte)(dBuffer.get(0))
+        expectResult(0x01.toByte)(dBuffer.get(1))
+        expectResult(0x02.toByte)(dBuffer.get(2))
     }
 }
 

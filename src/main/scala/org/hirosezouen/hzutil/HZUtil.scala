@@ -18,6 +18,7 @@ import java.io.OutputStream
 import java.io.Reader
 import java.io.Writer
 import java.net.InetAddress
+import java.nio.ByteBuffer
 import java.util.Properties
 
 import scala.actors._
@@ -350,6 +351,58 @@ object HZConfig {
         override def path(): String = {
             ""
         }
+    }
+}
+
+object HZByteBufferUtil {
+    def putByteToBuffer(p: Int, b: Byte)(implicit buffer: ByteBuffer) {
+        buffer.put(p,b)
+    }
+
+    def getByteFromBuffer(p: Int)(implicit buffer: ByteBuffer):Byte = {
+        buffer.get(p)
+    }
+
+    def putBytesToBuffer(start: Int, end: Int, bytes: Array[Byte])(implicit buffer: ByteBuffer) = {
+        val len = end - start
+        assert(len == bytes.length, f"putBytesToBuffer:expect=${len}%d,actual=${bytes.length}%d")
+        buffer.position(start)
+        buffer.put(bytes)
+    }
+
+    def getBytesFromBuffer(start: Int, end: Int)(implicit buffer: ByteBuffer): Array[Byte] = {
+        val len = end - start
+        val bytes = new Array[Byte](len)
+        buffer.position(start)
+        buffer.get(bytes)
+        bytes
+    }
+
+    def replaceBuffer(bytes: Array[Byte])(implicit buffer: ByteBuffer) {
+        assert(buffer.capacity == bytes.length, f"replaceBuffer:expect=${buffer.capacity}%d,actual=${bytes.length}%d")
+        buffer.rewind
+        buffer.put(bytes)
+    }
+
+    def putBufferToBuffer(start: Int, end: Int, sBuffer: ByteBuffer)(implicit dBuffer: ByteBuffer) {
+        val sLen = sBuffer.limit - sBuffer.position
+        val dLen = end - start
+        assert(sLen == dLen, f"putBufferToBuffer:expect=${dLen}%d,actual=${sLen}%d")
+        dBuffer.position(start)
+        dBuffer.put(sBuffer)
+    }
+
+    def getBufferFromBuffer(start: Int, end: Int)(implicit sBuffer: ByteBuffer): ByteBuffer = {
+        val sLen = sBuffer.limit - sBuffer.position
+        val dLen = end - start
+
+        assert(start <= end, f"getBufferFromBuffer:${end} < ${start}")
+        assert(end <= sBuffer.limit, f"getBufferFromBuffer:${sBuffer.limit} < ${end}")
+
+        sBuffer.position(start)
+        sBuffer.limit(end)
+        
+        sBuffer.slice
     }
 }
 
