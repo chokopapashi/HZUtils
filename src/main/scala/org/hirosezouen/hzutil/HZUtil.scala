@@ -292,6 +292,8 @@ object HZConfig {
     }
 
     class Key[A](name: String, parent: Key[_])(implicit tA: ru.TypeTag[A]) extends StringNode[Key[_]](name,".",parent) {
+        self =>
+
         var validator = new Validator {
             def validate_concrete: (String) => Option[String] = (_) => None
         }
@@ -341,7 +343,16 @@ object HZConfig {
 
         def keies(): List[Key[_]] = keies((l: Key[_]) => true)
         def keies(f: (Key[_]) => Boolean): List[Key[_]] = {
-            leafs.filter(f).toList
+//            leafs.filter(f).toList
+            def vals(node: Key[_], nodes: List[Key[_]]): List[Key[_]] = {
+                val ns = if(f(node)) node :: nodes
+                         else nodes
+                if(node.leafs.isEmpty)
+                    ns
+                else
+                    ns ::: node.leafs.toList.map(l => vals(l,List.empty[Key[_]])).flatten
+            }
+            vals(self, List.empty[Key[_]])
         }
 
         override def toString(): String = path()

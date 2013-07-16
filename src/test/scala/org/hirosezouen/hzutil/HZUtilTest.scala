@@ -186,6 +186,9 @@ class HZUtilTest extends FunSuite {
 
         expectResult(TestKey.paths)(List("TestKey","TestKey.a","TestKey.b","TestKey.c","TestKey.c.d","TestKey.c.e","TestKey.c.f","TestKey.c.f.g","TestKey.c.f.h","TestKey.c.f.i"))
         expectResult(TestKey.paths((l: Key[_]) => l.isLeaf))(List("TestKey.a","TestKey.b","TestKey.c.d","TestKey.c.e","TestKey.c.f.g","TestKey.c.f.h","TestKey.c.f.i"))
+
+        assert(TestKey.keies((l: Key[_]) => l.isLeaf).forall(_.isInstanceOf[Key[_]]))
+        expectResult(TestKey.keies((l: Key[_]) => l.isLeaf).map(_.toString))(List("TestKey.a","TestKey.b","TestKey.c.d","TestKey.c.e","TestKey.c.f.g","TestKey.c.f.h","TestKey.c.f.i"))
     }
 
     test("HZByteBufferUtil:sputByteToBuffer") {
