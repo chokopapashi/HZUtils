@@ -239,19 +239,20 @@ class HZUtilTest extends FunSuite {
         expectResult(0x03.toByte)(data(5))
     }
 
-    test("HZByteBufferUtil:putBufferToBuffer") {
+    test("HZByteBufferUtil:putBufferToBuffer_01") {
         val data = new Array[Byte](6)
-        implicit val buffer = ByteBuffer.wrap(data)
+        implicit val dBuffer = ByteBuffer.wrap(data)
 
-        val srcData = new Array[Byte](6) 
+        val srcData = new Array[Byte](6)
         val srcBuffer = ByteBuffer.wrap(srcData)
         srcBuffer.position(2)
         srcBuffer.put(Array(0xAB,0xCD,0xEF).map(_.toByte))
         srcBuffer.flip
         srcBuffer.position(2)
 
-        putBufferToBuffer(2,5,srcBuffer)
+        putBufferToBuffer(2,5,srcBuffer,2,5)
 
+//        print(s"${arrayToString(data)}%n")
         expectResult(0x00.toByte)(data(0))
         expectResult(0x00.toByte)(data(1))
         expectResult(0xAB.toByte)(data(2))
@@ -260,6 +261,24 @@ class HZUtilTest extends FunSuite {
         expectResult(0x00.toByte)(data(5))
     }
 
+    test("HZByteBufferUtil:putBufferToBuffer_02") {
+        val data = new Array[Byte](6)
+        implicit val dBuffer = ByteBuffer.wrap(data)
+
+        val srcData = Array(0xAB,0xCD,0xEF).map(_.toByte)
+        val srcBuffer = ByteBuffer.wrap(srcData)
+        srcBuffer.clear
+
+        putBufferToBuffer(2,5,srcBuffer)
+
+//        print(s"${arrayToString(data)}%n")
+        expectResult(0x00.toByte)(data(0))
+        expectResult(0x00.toByte)(data(1))
+        expectResult(0xAB.toByte)(data(2))
+        expectResult(0xCD.toByte)(data(3))
+        expectResult(0xEF.toByte)(data(4))
+        expectResult(0x00.toByte)(data(5))
+    }
 
     test("HZByteBufferUtil:getBufferFromBuffer") {
         val data =  Array(0xAB,0xCD,0xEF,0x01,0x02,0x03).map(_.toByte)

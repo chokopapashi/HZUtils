@@ -366,6 +366,7 @@ object HZByteBufferUtil {
     def putBytesToBuffer(start: Int, end: Int, bytes: Array[Byte])(implicit buffer: ByteBuffer) = {
         val len = end - start
         assert(len == bytes.length, f"putBytesToBuffer:expect=${len}%d,actual=${bytes.length}%d")
+        buffer.clear
         buffer.position(start)
         buffer.put(bytes)
     }
@@ -373,6 +374,7 @@ object HZByteBufferUtil {
     def getBytesFromBuffer(start: Int, end: Int)(implicit buffer: ByteBuffer): Array[Byte] = {
         val len = end - start
         val bytes = new Array[Byte](len)
+        buffer.clear
         buffer.position(start)
         buffer.get(bytes)
         bytes
@@ -380,19 +382,33 @@ object HZByteBufferUtil {
 
     def replaceBuffer(bytes: Array[Byte])(implicit buffer: ByteBuffer) {
         assert(buffer.capacity == bytes.length, f"replaceBuffer:expect=${buffer.capacity}%d,actual=${bytes.length}%d")
-        buffer.rewind
+        buffer.clear
         buffer.put(bytes)
     }
 
-    def putBufferToBuffer(start: Int, end: Int, sBuffer: ByteBuffer)(implicit dBuffer: ByteBuffer) {
-        val sLen = sBuffer.limit - sBuffer.position
-        val dLen = end - start
-        assert(sLen == dLen, f"putBufferToBuffer:expect=${dLen}%d,actual=${sLen}%d")
-        dBuffer.position(start)
+    def putBufferToBuffer(dStart: Int, dEnd: Int, sBuffer: ByteBuffer, _sStart: Int = -1, _sEnd: Int = -1)
+                         (implicit dBuffer: ByteBuffer)
+    {
+        val sStart = if(_sStart == -1) sBuffer.position else _sStart
+        val sEnd = if(_sEnd == -1) sBuffer.limit else _sEnd
+        val dLen = dEnd - dStart
+        val sLen = sEnd - sStart
+        assert(dLen == sLen, f"putBufferToBuffer:expect=${dLen}%d,actual=${sLen}%d")
+
+        dBuffer.clear
+        dBuffer.position(dStart)
+
+        sBuffer.clear
+        sBuffer.position(sStart)
+        sBuffer.limit(sEnd)
+
         dBuffer.put(sBuffer)
     }
 
     def getBufferFromBuffer(start: Int, end: Int)(implicit sBuffer: ByteBuffer): ByteBuffer = {
+        assert(sBuffer != null, f"getBufferFromBuffer:sBuffer == null")
+
+        sBuffer.clear
         val sLen = sBuffer.limit - sBuffer.position
         val dLen = end - start
 
