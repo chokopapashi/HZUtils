@@ -11,6 +11,7 @@ package org.hirosezouen.hznet
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.IOException
+import java.net.BindException
 import java.net.ConnectException 
 import java.net.InetSocketAddress
 import java.net.ServerSocket
@@ -51,6 +52,7 @@ case class HZSocketDisabled() extends HZActorReason
 case class HZPeerClosed() extends HZActorReason
 
 case class HZSoClientConf(endPoint: InetSocketAddress,
+                          localSocketAddressOpt: Option[InetSocketAddress],
                           connTimeout: Int,
                           recvTimeout: Int)
 {
@@ -58,10 +60,16 @@ case class HZSoClientConf(endPoint: InetSocketAddress,
     lazy val port = endPoint.getPort 
 }
 object HZSoClientConf {
-    def apply(endPoint: InetSocketAddress): HZSoClientConf = new HZSoClientConf(endPoint,0,0)
-    def apply(hostName: String ,port: Int): HZSoClientConf = new HZSoClientConf(new InetSocketAddress(hostName,port),0,0)
-    def apply(hostName: String ,port: Int, connTimeout: Int = 0, recvTimeout: Int = 0): HZSoClientConf =
-        new HZSoClientConf(new InetSocketAddress(hostName,port),connTimeout,recvTimeout)
+    def apply(endPoint: InetSocketAddress): HZSoClientConf = new HZSoClientConf(endPoint,None,0,0)
+    def apply(endPoint: InetSocketAddress, localSocketAddress: InetSocketAddress): HZSoClientConf =
+        new HZSoClientConf(endPoint,Some(localSocketAddress),0,0)
+    def apply(endPoint: InetSocketAddress, localSocketAddress: InetSocketAddress, connTimeout: Int, recvTimeout: Int): HZSoClientConf =
+        new HZSoClientConf(endPoint,Some(localSocketAddress),connTimeout,recvTimeout)
+    def apply(hostName: String ,port: Int): HZSoClientConf = new HZSoClientConf(new InetSocketAddress(hostName,port),None,0,0)
+    def apply(hostName: String ,port: Int, connTimeout: Int, recvTimeout: Int): HZSoClientConf =
+        new HZSoClientConf(new InetSocketAddress(hostName,port),None,connTimeout,recvTimeout)
+    def apply(hostName: String ,port: Int, localName: String, localPort: Int, connTimeout: Int, recvTimeout: Int): HZSoClientConf =
+        new HZSoClientConf(new InetSocketAddress(hostName,port),Some(new InetSocketAddress(localName,localPort)),connTimeout,recvTimeout)
 }
 
 case class HZSoServerConf(port: Int,
@@ -390,16 +398,44 @@ private object HZSocketControler {
         }
     }
 
-    def startConnectorActor(address: SocketAddress, timeout: Int, parent: Actor): Actor = {
-        log_debug("startConnectorActor(%s,%d,%s)".format(address,timeout,parent))
+    def startConnectorActor(address: SocketAddress, localSocketAddressOpt: Option[InetSocketAddress], timeout: Int, parent: Actor): Actor = {
+        log_debug("startConnectorActor(%s,%s,%d,%s)".format(address,localSocketAddressOpt,timeout,parent))
 
         actor {
             implicit val actorName = ActorName("Connector")
             log_hzso_actor_debug()
             link(parent)
 
+            val socket = new Socket
+
             catching(classOf[IOException]) either {
-                val socket = new Socket
+                localSocketAddressOpt match {
+                    case Some(socketAddress) => {
+                        log_hzso_actor_debug("socket.bind(%s)".format(socketAddress))
+                        socket.bind(socketAddress)
+                    }
+                    case None => /* Nothing to do */
+                }
+            } match {
+                case Right(so) => so
+                case Left(th) => th match {
+                    case _: BindException => {
+                        log_hzso_actor_error("socket.bind:Left(BindException(%s))".format(th.getMessage))
+                        exit(HZErrorStoped(th))
+                    }
+                    case _: IOException => {
+                        log_hzso_actor_error("socket.bind:Left(IOExcpetion(%s))".format(th.getMessage))
+                        exit(HZErrorStoped(th))
+                    }
+                    case _ => {
+                        log_hzso_actor_error("socket.bind:Left(%s)".format(th)) 
+                        log_hzso_actor_debug("socket.bind:Left",th) 
+                        exit(HZErrorStoped(th))
+                    }
+                }
+            }
+
+            catching(classOf[IOException]) either {
                 socket.connect(address, timeout)
                 socket
             } match {
