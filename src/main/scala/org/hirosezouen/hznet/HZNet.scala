@@ -32,7 +32,9 @@ case class HZSocketDescription(so: Socket) {
     val desc = if(so == null) "None"
                else so.toString
     val shortDesc = if(so == null) "None"
-                    else "[%s:%d,%d]".format(so.getInetAddress,so.getPort,so.getLocalPort)
+                    else f"[${so.getInetAddress}%s:${so.getPort}%d,${so.getLocalPort}%d]"
+    val fullDesc = if(so == null) "None"
+                   else f"[${so.getInetAddress}%s:${so.getPort}%d,${so.getLocalAddress}%s:${so.getLocalPort}%d]"
     override def toString(): String = desc
 }
 
