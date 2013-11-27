@@ -71,6 +71,10 @@ case class HZSocketClient(hzSoConf: HZSoClientConf)
                         log_hzso_actor_debug("loopConnecting:HZStop")
                         stopClient1(HZCommandStoped())
                     }
+                    case HZStopWithReason(reason) => {
+                        log_hzso_actor_debug("loopConnecting:HZStopWithReason(%s)".format(reason))
+                        stopClient1(HZCommandStopedWithReason(reason))
+                    }
                     case Exit(stopedActor: Actor, reason) => {
                         reason match {
                             case HZEstablished(so,connActor: Actor) => {
@@ -116,6 +120,10 @@ case class HZSocketClient(hzSoConf: HZSoClientConf)
                     case HZStop() => {
                         log_hzso_actor_debug("loopRunning:HZStop")
                         stopClient1(HZCommandStoped())
+                    }
+                    case HZStopWithReason(reason) => {
+                        log_hzso_actor_debug("loopConnecting:HZStopWithReason(%s)".format(reason))
+                        stopClient1(HZCommandStopedWithReason(reason))
                     }
                     case Exit(stopedActor: Actor, reason) => {
                         reason match {

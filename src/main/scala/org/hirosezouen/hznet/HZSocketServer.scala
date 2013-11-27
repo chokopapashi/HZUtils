@@ -139,6 +139,10 @@ case class HZSocketServer(hzSoConf: HZSoServerConf)
                         log_hzso_actor_debug("loopRunning:HZStop")
                         stopServer1(HZCommandStoped())
                     }
+                    case HZStopWithReason(reason) => {
+                        log_hzso_actor_debug("loopRunning:HZStopWithReason(%s)".format(reason))
+                        stopServer1(HZCommandStopedWithReason(reason))
+                    }
                     case Exit(stopedActor: Actor, reason) => {
                         if(stopedActor == acceptActor) {
                             log_hzso_actor_debug("loopRunning:1:Exit(%s,%s):AcceptActor Stoped".format(stopedActor,reason))

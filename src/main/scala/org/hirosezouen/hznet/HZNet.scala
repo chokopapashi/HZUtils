@@ -344,6 +344,10 @@ private object HZSocketControler {
                         log_hzso_actor_debug("loopRunning:HZStop")
                         stopIO1(HZCommandStoped())
                     }
+                    case HZStopWithReason(reason) => {
+                        log_hzso_actor_debug("loopRunning:HZStopWithReason(%s)".format(reason))
+                        stopIO1(HZCommandStopedWithReason(reason))
+                    }
                     case Exit(stopedActor: Actor, reason) => {
                         reason match {
                             case _ :HZActorReason => {

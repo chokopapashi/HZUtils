@@ -107,6 +107,7 @@ object HZActor {
 
     trait HZActorCommand
     case class HZStop() extends HZActorCommand 
+    case class HZStopWithReason(reason: AnyRef) extends HZActorCommand 
 
     trait HZActorInformation
 
@@ -114,7 +115,9 @@ object HZActor {
     trait HZActorStoped extends HZActorReason
     case class HZErrorStoped(th: Throwable) extends HZActorStoped
     case class HZNormalStoped() extends HZActorStoped
+    case class HZNormalStopedWithMessage(message: String) extends HZActorStoped
     case class HZCommandStoped() extends HZActorStoped
+    case class HZCommandStopedWithReason(reason: AnyRef) extends HZActorStoped
     case class HZUnHandledException(reason: Any) extends HZActorReason
     case class HZUnknownReason(reason: Any) extends HZActorReason
 
