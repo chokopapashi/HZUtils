@@ -88,12 +88,17 @@ trait SocketIOStaticDataImpl {
     def ioActor = _ioActor
     private def ioActor_=(a: Actor) = _ioActor = a
 
-    private [hznet] def apply(sd: HZSocketDescription, a: Actor): Unit = {
+    private var _socketActor: Actor = null
+    def socketActor = _socketActor
+    private def socketActor_=(a: Actor) = _socketActor = a
+
+    private [hznet] def apply(sd: HZSocketDescription, ia: Actor, sa: Actor): Unit = {
         so_desc = sd
-        ioActor = a
+        ioActor = ia
+        socketActor = sa
     }
 
-    def unapply(s: Any, a: Any): Boolean = (s.isInstanceOf[Socket] && a.isInstanceOf[Actor])
+    def unapply(s: Any, ia: Any, sa: Any): Boolean = (s.isInstanceOf[Socket] && ia.isInstanceOf[Actor] && sa.isInstanceOf[Actor])
 }
 
 trait SocketIOStaticData extends SocketIOStaticDataImpl {
@@ -284,7 +289,7 @@ private object HZSocketControler {
             }
 
             val staticData = staticDataBuilder.build()
-            staticData(so_desc, self)
+            staticData(so_desc, self, parent)
             staticData.initialize
 
             val out = new BufferedOutputStream(socket.getOutputStream)
