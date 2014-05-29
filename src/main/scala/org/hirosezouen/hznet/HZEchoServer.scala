@@ -45,6 +45,7 @@ object HZEchoServer {
                 log_info("Client connected:%s".format(so_desc))
             }
             case (_, HZDataReceived(receivedData)) => {
+                printf("Echo back : %s%n", new String(receivedData))
                 self ! HZDataSending(receivedData)
             }
             case (_, HZIOStop(_,reason,_,_,_)) => {

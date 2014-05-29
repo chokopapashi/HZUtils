@@ -46,7 +46,7 @@ object HZEchoClient {
                 self ! HZDataSending(s.getBytes)
             }
             case (_,HZDataReceived(receivedData)) => {
-                println(new String(receivedData))
+                printf("Echo : %s%n", new String(receivedData))
             }
         }
         actors += soClient
