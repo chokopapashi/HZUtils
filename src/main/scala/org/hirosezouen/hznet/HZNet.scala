@@ -278,13 +278,13 @@ private object HZSocketControler {
 
             def isSocketSendable(socket: Socket): Boolean = {
                 log_hzso_actor_trace("isSocketSendable:isConnected=%s,isClosed=%s,isOutputShutdown=%s"
-                          .format(self,socket.isConnected,socket.isClosed,socket.isOutputShutdown))
+                          .format(socket.isConnected,socket.isClosed,socket.isOutputShutdown))
                 socket.isConnected && (!socket.isClosed) && (!socket.isOutputShutdown)
             }
 
             def isSocketReadable(socket: Socket): Boolean = {
                 log_hzso_actor_trace("isSocketReadable:isConnected=%s,isClosed=%s,isInputShutdown=%s"
-                          .format(self,socket.isConnected,socket.isClosed,socket.isInputShutdown))
+                          .format(socket.isConnected,socket.isClosed,socket.isInputShutdown))
                 socket.isConnected && (!socket.isClosed) && (!socket.isInputShutdown)
             }
 
