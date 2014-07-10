@@ -12,6 +12,12 @@ import scala.actors._
 import scala.actors.Actor._
 import scala.util.control.Exception._
 
+// for migration from Scala Actor to Akka Actor
+import scala.concurrent.duration._
+import scala.actors.migration.pattern.ask
+import scala.actors.migration._
+import scala.concurrent._
+
 import org.hirosezouen.hzutil.HZActor._
 import org.hirosezouen.hzutil.HZIO._
 import org.hirosezouen.hzutil.HZLog._
@@ -37,11 +43,11 @@ object HZEchoClient {
             }
         }
 
-        var actors: Set[Actor] = Set.empty
+        var actors: Set[ActorRef] = Set.empty
 
         val soClient = startSocketClient(HZSoClientConf(ip,port,10000,0),
                                          SocketIOStaticDataBuilder,
-                                         self) {
+                                         self.asInstanceOf[ActorRef]) {
             case (_,s: String) => {
                 self ! HZDataSending(s.getBytes)
             }
@@ -65,7 +71,7 @@ object HZEchoClient {
         var mf: () => Unit = null
         
         def mainFun1() = receive {
-            case Exit(stopedActor: Actor, reason) => {
+            case Exit(stopedActor: ActorRef, reason) => {
                 log_debug("main:mainFun1:Exit(%s,%s)".format(stopedActor,reason))
                 actors -= stopedActor
                 if(actors.isEmpty) {
@@ -79,7 +85,7 @@ object HZEchoClient {
         }
 
         def mainFun2() = receive {
-            case Exit(stopedActor: Actor, reason) => {
+            case Exit(stopedActor: ActorRef, reason) => {
                 log_debug("main:mainFun2:Exit(%s,%s)".format(stopedActor,reason))
                 actors -= stopedActor
                 if(actors.isEmpty)

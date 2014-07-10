@@ -11,6 +11,12 @@ package org.hirosezouen.hznet
 import scala.actors._
 import scala.actors.Actor._
 
+// for migration from Scala Actor to Akka Actor
+import scala.concurrent.duration._
+import scala.actors.migration.pattern.ask
+import scala.actors.migration._
+import scala.concurrent._
+
 import org.hirosezouen.hzutil.HZActor._
 import org.hirosezouen.hzutil.HZIO._
 import org.hirosezouen.hzutil.HZLog._
@@ -30,7 +36,7 @@ object HZEchoServer {
             args(0).toInt
         }
 
-        var actors: Set[Actor] = Set.empty
+        var actors: Set[ActorRef] = Set.empty
 
         actors += startInputActor(System.in) {
             case "q" | "Q" => {
@@ -40,7 +46,7 @@ object HZEchoServer {
 
         actors += startSocketServer(HZSoServerConf(port),
                                     SocketIOStaticDataBuilder,
-                                    self) {
+                                    self.asInstanceOf[ActorRef]) {
             case (_, HZIOStart(so_desc,_,_)) => {
                 log_info("Client connected:%s".format(so_desc))
             }
@@ -58,7 +64,7 @@ object HZEchoServer {
         var mf: () => Unit = null
         
         def mainFun1() = receive {
-            case Exit(stopedActor: Actor, reason) => {
+            case Exit(stopedActor: ActorRef, reason) => {
                 log_debug("main:mainFun1:Exit(%s,%s)".format(stopedActor,reason))
                 actors -= stopedActor
                 if(actors.isEmpty) {
@@ -72,7 +78,7 @@ object HZEchoServer {
         }
 
         def mainFun2() = receive {
-            case Exit(stopedActor: Actor, reason) => {
+            case Exit(stopedActor: ActorRef, reason) => {
                 log_debug("main:mainFun2:Exit(%s,%s)".format(stopedActor,reason))
                 actors -= stopedActor
                 if(actors.isEmpty)

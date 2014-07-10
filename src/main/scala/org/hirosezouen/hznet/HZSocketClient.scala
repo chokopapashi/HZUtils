@@ -11,6 +11,12 @@ package org.hirosezouen.hznet
 import scala.actors._
 import scala.actors.Actor._
 
+// for migration from Scala Actor to Akka Actor
+import scala.concurrent.duration._
+import scala.actors.migration.pattern.ask
+import scala.actors.migration._
+import scala.concurrent._
+
 import org.hirosezouen.hzutil._
 import HZActor._
 import HZLog._
@@ -23,30 +29,22 @@ case class HZSocketClient(hzSoConf: HZSoClientConf)
     import HZSocketControler.{logger => _, _}
     import hzSoConf._
 
-    def startSocketClientActor(staticDataBuilder: SocketIOStaticDataBuilder, parent: Actor, linkParent: Boolean)
-                              (nextReceive: NextReceiver): Actor =
+    def startSocketClientActor(staticDataBuilder: SocketIOStaticDataBuilder, parent: ActorRef, linkParent: Boolean)
+                              (nextReceive: NextReceiver): ActorRef =
     {
         log_debug("startSocketClientActor")
 
-        actor {
-            implicit val actorName = ActorName("SocketClient")
-            log_hzso_actor_debug()
+        ActorDSL.actor(new ActWithStash {
+            private implicit val actorName = ActorName("SocketClient")
+            private var so_desc: HZSocketDescription = _
+            private var ioActor: ActorRef = _
+            private var actorSet = Set.empty[ActorRef]
+            private var originReason: AnyRef = _
+            private var loopfunc: () => Unit = _
 
-            if(linkParent) {
-                log_hzso_actor_debug("link(%s)".format(parent))
-                link(parent)
-            } else {
-                log_hzso_actor_debug("no link to parent")
-            }
-            self.trapExit = true
+            def receive = {case _ => }: PartialFunction[Any,Unit]
 
-            var so_desc: HZSocketDescription = null
-            var ioActor: Actor = null
-            var actorSet = Set.empty[Actor]
-            var originReason: AnyRef = null
-            var loopfunc: () => Unit = null
-
-            def stopClient1(reason: AnyRef, stopedActor: Actor = null) {
+            private def stopClient1(reason: AnyRef, stopedActor: ActorRef = null) {
                 log_hzso_actor_trace("stopClient1(%s,%s)".format(reason,stopedActor))
                 if(reason != null) originReason = reason
                 if(stopedActor != null) actorSet -= stopedActor
@@ -64,7 +62,7 @@ case class HZSocketClient(hzSoConf: HZSoClientConf)
                 }
             }
 
-            def loopConnecting() {
+            private def loopConnecting() {
                 log_hzso_actor_trace("loopConnecting")
                 react {
                     case HZStop() => {
@@ -75,9 +73,9 @@ case class HZSocketClient(hzSoConf: HZSoClientConf)
                         log_hzso_actor_debug("loopConnecting:HZStopWithReason(%s)".format(reason))
                         stopClient1(HZCommandStopedWithReason(reason))
                     }
-                    case Exit(stopedActor: Actor, reason) => {
+                    case Exit(stopedActor: ActorRef, reason) => {
                         reason match {
-                            case HZEstablished(so,connActor: Actor) => {
+                            case HZEstablished(so,connActor: ActorRef) => {
                                 log_hzso_actor_debug("loopConnecting:1:Exit(%s,HZEstablished(%s))".format(stopedActor,so))
                                 so.setSoTimeout(hzSoConf.recvTimeout)
                                 actorSet -= connActor 
@@ -106,7 +104,7 @@ case class HZSocketClient(hzSoConf: HZSoClientConf)
                 }
             }
 
-            def loopRunning() {
+            private def loopRunning() {
                 log_hzso_actor_trace("loopRunning")
                 react {
 //                    case dataReceived @ HZDataReceived(_) => {
@@ -125,7 +123,7 @@ case class HZSocketClient(hzSoConf: HZSoClientConf)
                         log_hzso_actor_debug("loopConnecting:HZStopWithReason(%s)".format(reason))
                         stopClient1(HZCommandStopedWithReason(reason))
                     }
-                    case Exit(stopedActor: Actor, reason) => {
+                    case Exit(stopedActor: ActorRef, reason) => {
                         reason match {
                             case _ :HZActorReason => {
                                 log_hzso_actor_debug("loopRunning:1:Exit(%s,%s)".format(stopedActor,reason))
@@ -149,10 +147,10 @@ case class HZSocketClient(hzSoConf: HZSoClientConf)
                 }
             }
 
-            def loopExiting() {
+            private def loopExiting() {
                 log_trace("SocketClient:loopExiting")
-                receive {
-                    case Exit(stopedActor: Actor, reason) => {
+                receive[Unit] {
+                    case Exit(stopedActor: ActorRef, reason) => {
                         reason match {
                             case _ :HZActorReason =>
                                 log_hzso_actor_debug("loopExiting:1:Exit(%s,%s)".format(stopedActor,reason))
@@ -168,15 +166,30 @@ case class HZSocketClient(hzSoConf: HZSoClientConf)
                 }
             }
 
-            /*
-             * main loop
-             */
-            actorSet += startConnectorActor(hzSoConf.endPoint, hzSoConf.localSocketAddressOpt, hzSoConf.connTimeout, self)
-            loopfunc = loopConnecting 
-            loop {
-                loopfunc()
+            override def preStart() {
+                log_hzso_actor_debug()
+
+                if(linkParent) {
+                    log_hzso_actor_debug("link(%s)".format(parent))
+                    link(parent)
+                } else {
+                    log_hzso_actor_debug("no link to parent")
+                }
+//                self.trapExit = true
+
+                actorSet += startConnectorActor(hzSoConf.endPoint, hzSoConf.localSocketAddressOpt, hzSoConf.connTimeout, self)
+                loopfunc = loopConnecting 
             }
-        }
+
+            override def act {
+                /*
+                 * main loop
+                 */
+                loop {
+                    loopfunc()
+                }
+            }
+        })
     }
 }
 
@@ -187,9 +200,9 @@ object HZSocketClient {
 
     def startSocketClient(hzSoConf: HZSoClientConf,
                           staticDataBuilder: SocketIOStaticDataBuilder,
-                          parent: Actor,
+                          parent: ActorRef,
                           linkParent: Boolean = true)
-                         (nextBody: NextReceiver): Actor
+                         (nextBody: NextReceiver): ActorRef
     = {
         log_debug("startSocketClient(%s,%s,%s,%s)".format(hzSoConf,staticDataBuilder,parent,linkParent))
         HZSocketClient(hzSoConf).startSocketClientActor(staticDataBuilder, parent, linkParent)(nextBody)
