@@ -123,6 +123,8 @@ object SocketIOStaticDataBuilder extends SocketIOStaticDataBuilder {
     }
 }
 
+
+
 private object HZSocketControler {
     implicit val logger = getLogger(this.getClass.getName)
 
@@ -136,6 +138,8 @@ private object HZSocketControler {
     def log_hzso_actor_trace(msg: => String)(implicit actorName: ActorName) = log_trace("%s:%s".format(actorName,msg))
     def log_hzso_actor_trace(msg: => String, th: Throwable)(implicit actorName: ActorName) = log_trace("%s:%s".format(actorName,msg),th)
     def log_hzso_actor_error(msg: => String = "")(implicit actorName: ActorName) = log_error("%s:%s".format(actorName,msg))
+
+    case class RecursiveMessage()
 
     def startSenderActor(outStream: BufferedOutputStream, so_desc: HZSocketDescription, parent: ActorRef): ActorRef = {
         log_debug("startSenderActor(%s,%s)".format(so_desc,parent))
@@ -166,10 +170,11 @@ private object HZSocketControler {
                 log_hzso_actor_debug()
                 link(parent)
             }
-            def receive: PartialFunction[Any,Unit] = {
+            def receive = {
                 case HZStop() => {
                     log_hzso_actor_debug("HZStop")
-                    exit(HZCommandStoped())
+//                    exit(HZCommandStoped())
+                    context.stop(self)
                 }
                 case HZDataSending(sendingData) => {
                     log_hzso_actor_debug("HZDataSending(%s)=%d".format(sendingData,sendingData.length))
@@ -181,7 +186,8 @@ private object HZSocketControler {
                         case Some(th) => {
                             log_hzso_actor_error("HZDataSending:sendData(%s,%s):%s".format(sendingData,outStream,th))
                             log_hzso_actor_debug("HZDataSending:sendData:%n%s".format(self,sendingData,outStream),th)
-                            exit(HZErrorStoped(th))
+//                            exit(HZErrorStoped(th))
+                            context.stop(self)
                         }
                     }
                 }
@@ -192,46 +198,47 @@ private object HZSocketControler {
     def startReceiverActor(inStream: BufferedInputStream, so_desc: HZSocketDescription, parent: ActorRef): ActorRef = {
         log_debug("startReceiverActor(%s,%s)".format(so_desc,parent))
 
-        private val readBuff = new Array[Byte](4096)
-        def receiveData(in: BufferedInputStream)(implicit actorName: ActorName): Either[Throwable,Option[Array[Byte]]] = {
-            log_hzso_actor_trace("receiveData(%s)".format(in))
-
-            val ret = catching(classOf[IOException]) either {
-                in.read(readBuff)
-            } match {
-                case Right(c) => {
-                    log_hzso_actor_trace("receiveData:%d=in.read(%s)".format(c,readBuff)) 
-                    if(c < 0) {
-                        log_hzso_actor_debug("receiveData:in.read:%d".format(c)) 
-                        Right(None)
-                    } else if(c == 0) {
-                        log_hzso_actor_debug("receiveData:in.read:0") 
-                        val th = new IllegalArgumentException("0=in.read()")
-                        log_hzso_actor_trace("receiveData:in.read",th) 
-                        Left(th)
-                    } else
-                        Right(Some(readBuff.take(c)))
-                }
-                case Left(th) => {
-                    log_hzso_actor_debug("receiveData:in.read:%s".format(th)) 
-                    Left(th)
-                }
-            }
-            ret
-        }
-
         ActorDSL.actor(new ActWithStash {
             private implicit val actorName = ActorName("Receiver",so_desc)
-            def receive = {case _ => }: PartialFunction[Any,Unit]
+            private val readBuff = new Array[Byte](4096)
+
+            def receiveData(in: BufferedInputStream)(implicit actorName: ActorName): Either[Throwable,Option[Array[Byte]]] = {
+                log_hzso_actor_trace("receiveData(%s)".format(in))
+
+                val ret = catching(classOf[IOException]) either {
+                    in.read(readBuff)
+                } match {
+                    case Right(c) => {
+                        log_hzso_actor_trace("receiveData:%d=in.read(%s)".format(c,readBuff)) 
+                        if(c < 0) {
+                            log_hzso_actor_debug("receiveData:in.read:%d".format(c)) 
+                            Right(None)
+                        } else if(c == 0) {
+                            log_hzso_actor_debug("receiveData:in.read:0") 
+                            val th = new IllegalArgumentException("0=in.read()")
+                            log_hzso_actor_trace("receiveData:in.read",th) 
+                            Left(th)
+                        } else
+                            Right(Some(readBuff.take(c)))
+                    }
+                    case Left(th) => {
+                        log_hzso_actor_debug("receiveData:in.read:%s".format(th)) 
+                        Left(th)
+                    }
+                }
+                ret
+            }
+
             override def preStart() {
                 log_hzso_actor_debug()
                 link(parent)
+                self ! RecursiveMessage()
             }
-            override def act {
-                loop {
+            def receive = {
+                case RecursiveMessage() => {
                     /*
-                     * ReceiverにはSocketを渡さいないので、isSocketReadable()は使えない。
-                     * SocketがcloseしたかどうかはreceiveData()の例外で判断する。
+                     * Function "isSocketReadable()" dosen't use at this point because Socket isn't gave for message receiver.
+                     * Therefor whether or not Socket have closed, it evaluates raised exception from receiveData().
                      */
                     receiveData(inStream) match {
                         case Right(receivedDataOpt) => {
@@ -241,7 +248,10 @@ private object HZSocketControler {
                                     log_hzso_actor_trace("receiveData:Right:%n%s".format(hexDump(receivedData)))
                                     parent ! HZDataReceived(receivedData)
                                 }
-                                case None => exit(HZPeerClosed())
+                                case None => {
+                                    //exit(HZPeerClosed())
+                                    context.stop(self)
+                                }
                             }
                         }
                         case Left(th) => th match {
@@ -250,11 +260,13 @@ private object HZSocketControler {
                             }
                             case _: SocketException => {
                                 log_hzso_actor_error("receiveData:Left(SocektExcpetion(%s))".format(th.getMessage))
-                                exit(HZErrorStoped(th))
+                                //exit(HZErrorStoped(th))
+                                context.stop(self)
                             }
                             case _: IOException => {
                                 log_hzso_actor_error("receiveData:Left(IOExcpetion(%s))".format(th.getMessage))
-                                exit(HZErrorStoped(th))
+                                //exit(HZErrorStoped(th))
+                                context.stop(self)
                             }
                             case _: InterruptedException => {
                                 log_hzso_actor_debug("receiveData:Left(InterruptedException)")
@@ -262,10 +274,12 @@ private object HZSocketControler {
                             case _ => {
                                 log_hzso_actor_error("receiveData:Left(%s)".format(th))
                                 log_hzso_actor_debug("receiveData:Left",th)
-                                exit(HZErrorStoped(th))
+                                //exit(HZErrorStoped(th))
+                                context.stop(self)
                             }
                         }
                     }
+                    self ! RecursiveMessage()
                 }
             }
         })
@@ -292,9 +306,7 @@ private object HZSocketControler {
             private var actorSet = Set.empty[ActorRef]
 
             private var originReason: AnyRef = _
-            private var loopfunc: () => Unit = _
-
-            def receive = {case _ => }: PartialFunction[Any,Unit]
+            private var loopfunc: (Any) => Unit = _
 
             private def isSocketSendable(socket: Socket): Boolean = {
                 log_hzso_actor_trace("isSocketSendable:isConnected=%s,isClosed=%s,isOutputShutdown=%s"
@@ -316,17 +328,19 @@ private object HZSocketControler {
                 socket.close
                 if(reason != null) originReason = reason
                 if(stopedActor != null) actorSet -= stopedActor
-                if(actorSet.isEmpty)
-                    exit(originReason)
+                if(actorSet.isEmpty) {
+                    //exit(originReason)
+                    context.stop(self)
+                }
                 else {
                     actorSet.foreach(_ ! HZStop())
                     loopfunc = loopExiting
                 }
             }
 
-            private def loopRunning() {
+            private def loopRunning(msg: Any) {
                 log_hzso_actor_trace("loopRunning")
-                receive[Unit] {
+                msg match {
 //                    case dataReceived @ HZDataReceived(r) => {
 //                        log_debug("SocketIO:loopRunning:HZDataReceived(%s)".format(r))
 //                        parent ! dataReceived
@@ -357,7 +371,8 @@ private object HZSocketControler {
                         log_hzso_actor_debug("loopRunning:HZStopWithReason(%s)".format(reason))
                         stopIO1(HZCommandStopedWithReason(reason))
                     }
-                    case Exit(stopedActor: ActorRef, reason) => {
+                    case t @ Terminated(stopedActor) => {
+                        val reason = t.reason
                         reason match {
                             case _ :HZActorReason => {
                                 log_hzso_actor_debug("loopRunning:1:Exit(%s,%s)".format(stopedActor,reason))
@@ -383,10 +398,11 @@ private object HZSocketControler {
                 }
             }
 
-            def loopExiting() {
+            def loopExiting(msg: Any) {
                 log_hzso_actor_trace("loopExiting")
                 receive[Unit] {
-                    case Exit(stopedActor: ActorRef, reason) => {
+                    case t @ Terminated(stopedActor) => {
+                        val reason = t.reason
                         reason match {
                             case _ :HZActorReason =>
                                 log_hzso_actor_debug("loopExiting:1:Exit(%s,%s)".format(stopedActor,reason))
@@ -396,7 +412,10 @@ private object HZSocketControler {
                                 log_hzso_actor_debug("loopExiting:3:Exit(%s,%s)".format(stopedActor,HZUnknownReason(reason)))
                         }
                         actorSet -= stopedActor
-                        if(actorSet.isEmpty) exit(originReason)
+                        if(actorSet.isEmpty) {
+                            //exit(originReason)
+                            context.stop(self)
+                        }
                     }
                     case x => log_hzso_actor_debug("loopExiting:%s".format(x))
                 }
@@ -420,14 +439,8 @@ private object HZSocketControler {
                 loopfunc = loopRunning 
             }
 
-            override def act {
-       
-                /*
-                 * main loop
-                 */
-                loop {
-                    loopfunc()
-                }
+            def receive = {
+                case msg => loopfunc(msg)
             }
         })
     }
@@ -438,12 +451,13 @@ private object HZSocketControler {
         ActorDSL.actor(new ActWithStash {
             private implicit val actorName = ActorName("Connector")
 
-            def receive = {case _ => }: PartialFunction[Any,Unit]
+            private var socket: Socket = _
+
             override def preStart() {
                 log_hzso_actor_debug()
                 link(parent)
 
-                val socket = new Socket
+                socket = new Socket
 
                 catching(classOf[IOException]) either {
                     localSocketAddressOpt match {
@@ -458,54 +472,68 @@ private object HZSocketControler {
                     case Left(th) => th match {
                         case _: BindException => {
                             log_hzso_actor_error("socket.bind:Left(BindException(%s))".format(th.getMessage))
-                            exit(HZErrorStoped(th))
+                            //exit(HZErrorStoped(th))
+                            context.stop(self)
                         }
                         case _: IOException => {
                             log_hzso_actor_error("socket.bind:Left(IOExcpetion(%s))".format(th.getMessage))
-                            exit(HZErrorStoped(th))
+                            //exit(HZErrorStoped(th))
+                            context.stop(self)
                         }
                         case _ => {
                             log_hzso_actor_error("socket.bind:Left(%s)".format(th)) 
                             log_hzso_actor_debug("socket.bind:Left",th) 
-                            exit(HZErrorStoped(th))
+                            //exit(HZErrorStoped(th))
+                            context.stop(self)
                         }
                     }
                 }
 
-                catching(classOf[IOException]) either {
-                    socket.connect(address, timeout)
-                    socket
-                } match {
-                    case Right(so) => {
-                        log_hzso_actor_debug("socket.connect:Right(%s)".format(so))
-                        exit(HZEstablished(so,self))
-                    }
-                    case Left(th) => th match {
-                        case _: SocketTimeoutException => {
-                            log_hzso_actor_error("socket.connect:Left(SocketTimeoutException(%s))".format(th.getMessage))
-                            exit(HZConnectTimeout())
-                        }
-                        case _: ConnectException => {
-                            log_hzso_actor_error("socket.connect:Left(ConnectException(%s))".format(th.getMessage))
-                            exit(HZErrorStoped(th))
-                        }
-                        case _: SocketException => {
-                            log_hzso_actor_error("socket.connect:Left(SocektExcpetion(%s))".format(th.getMessage))
-                            exit(HZErrorStoped(th))
-                        }
-                        case _: IOException => {
-                            log_hzso_actor_error("socket.connect:Left(IOExcpetion(%s))".format(th.getMessage))
-                            exit(HZErrorStoped(th))
-                        }
-                        case _ => {
-                            log_hzso_actor_error("socket.connect:Left(%s)".format(th)) 
-                            log_hzso_actor_debug("socket.connect:Left",th) 
-                            exit(HZErrorStoped(th))
-                        }
-                    }
-                }
+                self ! RecursiveMessage()
             }
-            override def act {
+
+            def receive = {
+                case RecursiveMessage() => {
+                    catching(classOf[IOException]) either {
+                        socket.connect(address, timeout)
+                        socket
+                    } match {
+                        case Right(so) => {
+                            log_hzso_actor_debug("socket.connect:Right(%s)".format(so))
+                            //exit(HZEstablished(so,self))
+                            context.stop(self)
+                        }
+                        case Left(th) => th match {
+                            case _: SocketTimeoutException => {
+                                log_hzso_actor_error("socket.connect:Left(SocketTimeoutException(%s))".format(th.getMessage))
+                                //exit(HZConnectTimeout())
+                                context.stop(self)
+                            }
+                            case _: ConnectException => {
+                                log_hzso_actor_error("socket.connect:Left(ConnectException(%s))".format(th.getMessage))
+                                //exit(HZErrorStoped(th))
+                                context.stop(self)
+                            }
+                            case _: SocketException => {
+                                log_hzso_actor_error("socket.connect:Left(SocektExcpetion(%s))".format(th.getMessage))
+                                //exit(HZErrorStoped(th))
+                                context.stop(self)
+                            }
+                            case _: IOException => {
+                                log_hzso_actor_error("socket.connect:Left(IOExcpetion(%s))".format(th.getMessage))
+                                //exit(HZErrorStoped(th))
+                                context.stop(self)
+                            }
+                            case _ => {
+                                log_hzso_actor_error("socket.connect:Left(%s)".format(th)) 
+                                log_hzso_actor_debug("socket.connect:Left",th) 
+                                //exit(HZErrorStoped(th))
+                                context.stop(self)
+                            }
+                        }
+                    }
+                    self ! RecursiveMessage()
+                }
             }
         })
     }
@@ -516,7 +544,6 @@ private object HZSocketControler {
         ActorDSL.actor(new ActWithStash {
             private implicit val actorName = ActorName("Accepter")
 
-            def receive = {case _ => }: PartialFunction[Any,Unit]
             override def preStart() {
                 log_hzso_actor_debug()
                 link(parent)
@@ -530,14 +557,17 @@ private object HZSocketControler {
                         case Left(th) => {
                             log_hzso_actor_error("serverSocket.setSoTimeout:Left(%s)".format(th)) 
                             log_hzso_actor_debug("serverSocket.setSoTimeout:Left",th) 
-                            exit(HZErrorStoped(th))
+                            //exit(HZErrorStoped(th))
+                            context.stop(self)
                         }
                     }
                 }
+
+                self ! RecursiveMessage()
             }
 
-            override def act {
-                loop {
+            def receive = {
+                case RecursiveMessage() => {
                     catching(classOf[IOException]) either {
                         serverSocket.accept()
                     } match {
@@ -548,24 +578,29 @@ private object HZSocketControler {
                         case Left(th) => th match {
                             case _: SocketTimeoutException => {
                                 log_hzso_actor_error("serverSocket.accept:Left(SocketTimeoutException(%s))".format(th.getMessage))
-                                exit(HZConnectTimeout())
+                                //exit(HZConnectTimeout())
+                                context.stop(self)
                             }
                             case _: SocketException => {
                                 log_hzso_actor_error("serverSocket.accept:Left(SocektExcpetion(%s))".format(th.getMessage))
-                                exit(HZErrorStoped(th))
+                                //exit(HZErrorStoped(th))
+                                context.stop(self)
                             }
                             case _: IOException => {
                                 log_hzso_actor_error("serverSocket.accept:Left(IOExcpetion(%s))".format(th.getMessage))
-                                exit(HZErrorStoped(th))
+                                //exit(HZErrorStoped(th))
+                                context.stop(self)
                             }
                             case _ => {
                                 log_hzso_actor_error("serverSocket.accept:Left(%s)".format(th)) 
                                 log_hzso_actor_debug("serverSocket.accept:Left",th) 
-                                exit(HZErrorStoped(th))
+                                //exit(HZErrorStoped(th))
+                                context.stop(self)
                             }
                         }
                     }
                 }
+                self ! RecursiveMessage()
             }
         })
     }
