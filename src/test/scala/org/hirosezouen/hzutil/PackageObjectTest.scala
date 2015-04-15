@@ -6,8 +6,8 @@ import org.hirosezouen.hzutil._
 
 class PackageObjectTest extends FunSuite {
     test("unsignedBigEndianShortBytes2Int") {
-        expectResult(0x0000ABCD.toInt)(unsignedBigEndianShortBytes2Int(Array[Byte](0xAB.toByte,0xCD.toByte)))
-        expectResult(0x0000FE01.toInt)(unsignedBigEndianShortBytes2Int(Array[Byte](0xFE.toByte,0x01.toByte)))
+        assertResult(0x0000ABCD.toInt)(unsignedBigEndianShortBytes2Int(Array[Byte](0xAB.toByte,0xCD.toByte)))
+        assertResult(0x0000FE01.toInt)(unsignedBigEndianShortBytes2Int(Array[Byte](0xFE.toByte,0x01.toByte)))
     }
 
     test("int2unsignedBigEndianShortBytes") {
@@ -16,8 +16,8 @@ class PackageObjectTest extends FunSuite {
     }
 
     test("unsignedBingEndianIntBytes2Long") {
-        expectResult(0x00000000ABCDEF12L)(unsignedBingEndianIntBytes2Long(Array[Byte](0xAB.toByte,0xCD.toByte,0xEF.toByte,0x12.toByte)))
-        expectResult(0x00000000FEDCBA98L)(unsignedBingEndianIntBytes2Long(Array[Byte](0xFE.toByte,0xDC.toByte,0xBA.toByte,0x98.toByte)))
+        assertResult(0x00000000ABCDEF12L)(unsignedBingEndianIntBytes2Long(Array[Byte](0xAB.toByte,0xCD.toByte,0xEF.toByte,0x12.toByte)))
+        assertResult(0x00000000FEDCBA98L)(unsignedBingEndianIntBytes2Long(Array[Byte](0xFE.toByte,0xDC.toByte,0xBA.toByte,0x98.toByte)))
     }
 
     test("log2unsignedBigEndianIntBytes") {
@@ -35,7 +35,7 @@ class PackageObjectTest extends FunSuite {
                             0x30,0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39)
 //        printf(e)
 //        printf(hexDump(a))
-        expectResult(e)(hexDump(a))
+        assertResult(e)(hexDump(a))
     }
 
     test("string2ByteArray_1") {

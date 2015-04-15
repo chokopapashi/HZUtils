@@ -59,7 +59,7 @@ class HZUtilTest extends FunSuite {
         log_info("this is " + "test log_info(msg)" + " 01")
 //        println("'%s'".format(test_logger.getLog))
 //        test_logger.byteOutStream.toByteArray.foreach(printf("%02X",_))
-        expectResult("INFO  - this is test log_info(msg) 01\r\n")(test_logger.getLog)
+        assertResult("INFO  - this is test log_info(msg) 01\r\n")(test_logger.getLog)
     }
 
     test("HZLog.log_debug(msg).01") {
@@ -73,8 +73,8 @@ class HZUtilTest extends FunSuite {
         }
 
         log_debug("this is " + "test log_debug(" + f() +") 01")
-        expectResult("")(test_logger.getLog)
-        expectResult(0)(debug_count)
+        assertResult("")(test_logger.getLog)
+        assertResult(0)(debug_count)
     }
 
     test("HZLog.l_t(msg).01") {
@@ -82,7 +82,7 @@ class HZUtilTest extends FunSuite {
         implicit val logger = test_logger.logger
 
         l_t("this is " + "test l_t(msg) 01")
-        expectResult("")(test_logger.getLog)
+        assertResult("")(test_logger.getLog)
     }
 
     test("HZLog.l_t(msg).02") {
@@ -102,13 +102,13 @@ class HZUtilTest extends FunSuite {
         val prop = HZProperty(testdata)
         prop.loadProperty()
 
-        expectResult(prop("TestKey.a"))(Some("123"))
-        expectResult(prop("TestKey.b"))(Some("456"))
-        expectResult(prop("TestKey.c.d"))(Some("abc"))
-        expectResult(prop("TestKey.c.e"))(Some("def"))
-        expectResult(prop("TestKey.c.f.g"))(Some("true"))
-        expectResult(prop("TestKey.c.f.h"))(Some("false"))
-        expectResult(prop("TestKey.c.f.i"))(Some(""))
+        assertResult(prop("TestKey.a"))(Some("123"))
+        assertResult(prop("TestKey.b"))(Some("456"))
+        assertResult(prop("TestKey.c.d"))(Some("abc"))
+        assertResult(prop("TestKey.c.e"))(Some("def"))
+        assertResult(prop("TestKey.c.f.g"))(Some("true"))
+        assertResult(prop("TestKey.c.f.h"))(Some("false"))
+        assertResult(prop("TestKey.c.f.i"))(Some(""))
 
         assert(prop.exists("TestKey.a"))
         assert(prop.exists("TestKey.b"))
@@ -152,29 +152,29 @@ class HZUtilTest extends FunSuite {
         val testdata = sys.props("user.dir") + "/src/test/resources/test_data/hzProperty_test.properties"
         implicit val conf = HZConfig(testdata)
         conf.loadProperty()
-        expectResult(TestKey.a.optString())(Some("123"))
-        expectResult(TestKey.b.optString())(Some("456"))
-        expectResult(TestKey.c.d.optString())(Some("abc"))
-        expectResult(TestKey.c.e.optString())(Some("def"))
-        expectResult(TestKey.c.f.g.optString())(Some("true"))
-        expectResult(TestKey.c.f.h.optString())(Some("false"))
-        expectResult(TestKey.c.f.i.optString())(Some(""))
+        assertResult(TestKey.a.optString())(Some("123"))
+        assertResult(TestKey.b.optString())(Some("456"))
+        assertResult(TestKey.c.d.optString())(Some("abc"))
+        assertResult(TestKey.c.e.optString())(Some("def"))
+        assertResult(TestKey.c.f.g.optString())(Some("true"))
+        assertResult(TestKey.c.f.h.optString())(Some("false"))
+        assertResult(TestKey.c.f.i.optString())(Some(""))
 
-        expectResult(TestKey.a.optVal())(Some(123))
-        expectResult(TestKey.b.optVal())(Some(456))
-        expectResult(TestKey.c.d.optVal())(Some("abc"))
-        expectResult(TestKey.c.e.optVal())(Some("def"))
-        expectResult(TestKey.c.f.g.optVal())(Some(true))
-        expectResult(TestKey.c.f.h.optVal())(Some(false))
-        expectResult(TestKey.c.f.i.optVal())(Some(""))
+        assertResult(TestKey.a.optVal())(Some(123))
+        assertResult(TestKey.b.optVal())(Some(456))
+        assertResult(TestKey.c.d.optVal())(Some("abc"))
+        assertResult(TestKey.c.e.optVal())(Some("def"))
+        assertResult(TestKey.c.f.g.optVal())(Some(true))
+        assertResult(TestKey.c.f.h.optVal())(Some(false))
+        assertResult(TestKey.c.f.i.optVal())(Some(""))
 
-        expectResult(TestKey.a())(123)
-        expectResult(TestKey.b())(456)
-        expectResult(TestKey.c.d())("abc")
-        expectResult(TestKey.c.e())("def")
-        expectResult(TestKey.c.f.g())(true)
-        expectResult(TestKey.c.f.h())(false)
-        expectResult(TestKey.c.f.i())("")
+        assertResult(TestKey.a())(123)
+        assertResult(TestKey.b())(456)
+        assertResult(TestKey.c.d())("abc")
+        assertResult(TestKey.c.e())("def")
+        assertResult(TestKey.c.f.g())(true)
+        assertResult(TestKey.c.f.h())(false)
+        assertResult(TestKey.c.f.i())("")
 
         assert(TestKey.a.nonEmpty())
         assert(TestKey.b.nonEmpty())
@@ -184,11 +184,11 @@ class HZUtilTest extends FunSuite {
         assert(TestKey.c.f.h.nonEmpty())
         assert(TestKey.c.f.i.isEmpty())
 
-        expectResult(TestKey.paths)(List("TestKey","TestKey.a","TestKey.b","TestKey.c","TestKey.c.d","TestKey.c.e","TestKey.c.f","TestKey.c.f.g","TestKey.c.f.h","TestKey.c.f.i"))
-        expectResult(TestKey.paths((l: Key[_]) => l.isLeaf))(List("TestKey.a","TestKey.b","TestKey.c.d","TestKey.c.e","TestKey.c.f.g","TestKey.c.f.h","TestKey.c.f.i"))
+        assertResult(TestKey.paths)(List("TestKey","TestKey.a","TestKey.b","TestKey.c","TestKey.c.d","TestKey.c.e","TestKey.c.f","TestKey.c.f.g","TestKey.c.f.h","TestKey.c.f.i"))
+        assertResult(TestKey.paths((l: Key[_]) => l.isLeaf))(List("TestKey.a","TestKey.b","TestKey.c.d","TestKey.c.e","TestKey.c.f.g","TestKey.c.f.h","TestKey.c.f.i"))
 
         assert(TestKey.keies((l: Key[_]) => l.isLeaf).forall(_.isInstanceOf[Key[_]]))
-        expectResult(TestKey.keies((l: Key[_]) => l.isLeaf).map(_.toString))(List("TestKey.a","TestKey.b","TestKey.c.d","TestKey.c.e","TestKey.c.f.g","TestKey.c.f.h","TestKey.c.f.i"))
+        assertResult(TestKey.keies((l: Key[_]) => l.isLeaf).map(_.toString))(List("TestKey.a","TestKey.b","TestKey.c.d","TestKey.c.e","TestKey.c.f.g","TestKey.c.f.h","TestKey.c.f.i"))
     }
 
     test("HZByteBufferUtil:sputByteToBuffer") {
@@ -196,14 +196,14 @@ class HZUtilTest extends FunSuite {
         implicit val buffer = ByteBuffer.wrap(data)
         putByteToBuffer(2,0xAB.toByte)
 
-        expectResult(0xAB.toByte)(buffer.get(2))
+        assertResult(0xAB.toByte)(buffer.get(2))
     }
 
     test("HZByteBufferUtil:getByteFromBuffer") {
         val data = new Array[Byte](6)
         implicit val buffer = ByteBuffer.wrap(data)
         buffer.put(3,0xAB.toByte)
-        expectResult(0xAB.toByte)(getByteFromBuffer(3))
+        assertResult(0xAB.toByte)(getByteFromBuffer(3))
     }
 
     test("HZByteBufferUtil:putBytesToBuffer") {
@@ -211,9 +211,9 @@ class HZUtilTest extends FunSuite {
         implicit val buffer = ByteBuffer.wrap(data)
         putBytesToBuffer(2,5,Array(0xAB,0xCD,0xEF).map(_.toByte))
     
-        expectResult(0xAB.toByte)(buffer.get(2))
-        expectResult(0xCD.toByte)(buffer.get(3))
-        expectResult(0xEF.toByte)(buffer.get(4))
+        assertResult(0xAB.toByte)(buffer.get(2))
+        assertResult(0xCD.toByte)(buffer.get(3))
+        assertResult(0xEF.toByte)(buffer.get(4))
     }
 
     test("HZByteBufferUtil:getBytesFromBuffer") {
@@ -223,9 +223,9 @@ class HZUtilTest extends FunSuite {
         buffer.put(Array(0xAB,0xCD,0xEF).map(_.toByte))
         
         val outData = getBytesFromBuffer(3,6)
-        expectResult(0xAB.toByte)(outData(0))
-        expectResult(0xCD.toByte)(outData(1))
-        expectResult(0xEF.toByte)(outData(2))
+        assertResult(0xAB.toByte)(outData(0))
+        assertResult(0xCD.toByte)(outData(1))
+        assertResult(0xEF.toByte)(outData(2))
     }
 
     test("HZByteBufferUtil:replaceBuffer") {
@@ -234,12 +234,12 @@ class HZUtilTest extends FunSuite {
 
         replaceBuffer(Array(0xAB,0xCD,0xEF,0x01,0x02,0x03).map(_.toByte))
 
-        expectResult(0xAB.toByte)(data(0))
-        expectResult(0xCD.toByte)(data(1))
-        expectResult(0xEF.toByte)(data(2))
-        expectResult(0x01.toByte)(data(3))
-        expectResult(0x02.toByte)(data(4))
-        expectResult(0x03.toByte)(data(5))
+        assertResult(0xAB.toByte)(data(0))
+        assertResult(0xCD.toByte)(data(1))
+        assertResult(0xEF.toByte)(data(2))
+        assertResult(0x01.toByte)(data(3))
+        assertResult(0x02.toByte)(data(4))
+        assertResult(0x03.toByte)(data(5))
     }
 
     test("HZByteBufferUtil:putBufferToBuffer_01") {
@@ -256,12 +256,12 @@ class HZUtilTest extends FunSuite {
         putBufferToBuffer(2,5,srcBuffer,2,5)
 
 //        print(s"${arrayToString(data)}%n")
-        expectResult(0x00.toByte)(data(0))
-        expectResult(0x00.toByte)(data(1))
-        expectResult(0xAB.toByte)(data(2))
-        expectResult(0xCD.toByte)(data(3))
-        expectResult(0xEF.toByte)(data(4))
-        expectResult(0x00.toByte)(data(5))
+        assertResult(0x00.toByte)(data(0))
+        assertResult(0x00.toByte)(data(1))
+        assertResult(0xAB.toByte)(data(2))
+        assertResult(0xCD.toByte)(data(3))
+        assertResult(0xEF.toByte)(data(4))
+        assertResult(0x00.toByte)(data(5))
     }
 
     test("HZByteBufferUtil:putBufferToBuffer_02") {
@@ -275,12 +275,12 @@ class HZUtilTest extends FunSuite {
         putBufferToBuffer(2,5,srcBuffer)
 
 //        print(s"${arrayToString(data)}%n")
-        expectResult(0x00.toByte)(data(0))
-        expectResult(0x00.toByte)(data(1))
-        expectResult(0xAB.toByte)(data(2))
-        expectResult(0xCD.toByte)(data(3))
-        expectResult(0xEF.toByte)(data(4))
-        expectResult(0x00.toByte)(data(5))
+        assertResult(0x00.toByte)(data(0))
+        assertResult(0x00.toByte)(data(1))
+        assertResult(0xAB.toByte)(data(2))
+        assertResult(0xCD.toByte)(data(3))
+        assertResult(0xEF.toByte)(data(4))
+        assertResult(0x00.toByte)(data(5))
     }
 
     test("HZByteBufferUtil:getBufferFromBuffer") {
@@ -289,12 +289,12 @@ class HZUtilTest extends FunSuite {
 
         val dBuffer = getBufferFromBuffer(2,5)
         dBuffer.clear
-        expectResult(3)(dBuffer.limit)
-        expectResult(3)(dBuffer.capacity)
+        assertResult(3)(dBuffer.limit)
+        assertResult(3)(dBuffer.capacity)
 
-        expectResult(0xEF.toByte)(dBuffer.get(0))
-        expectResult(0x01.toByte)(dBuffer.get(1))
-        expectResult(0x02.toByte)(dBuffer.get(2))
+        assertResult(0xEF.toByte)(dBuffer.get(0))
+        assertResult(0x01.toByte)(dBuffer.get(1))
+        assertResult(0x02.toByte)(dBuffer.get(2))
     }
 }
 
