@@ -29,9 +29,9 @@ lazy val root = (project in file(".")).
         libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.4" % "test",
 
         // add Logback, SLF4j dependencies
-        libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.1.2",
-        libraryDependencies += "ch.qos.logback" % "logback-core" % "1.1.2",
-        libraryDependencies += "org.slf4j" % "slf4j-api" % "1.7.10",
+        libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.1.3",
+        libraryDependencies += "ch.qos.logback" % "logback-core" % "1.1.3",
+        libraryDependencies += "org.slf4j" % "slf4j-api" % "1.7.12",
 
         // Avoid sbt warning ([warn] This usage is deprecated and will be removed in sbt 1.0)
         // Current Sbt dose not allow overwrite stabele release created publicLocal task.
