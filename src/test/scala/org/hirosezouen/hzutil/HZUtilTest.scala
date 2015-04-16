@@ -20,13 +20,14 @@ import org.hirosezouen.hzutil.HZByteBufferUtil._
 
 class HZUtilTest extends FunSuite {
 
-    case class TestLogger(name: String, level: Level) {
+    case class TestLogger(name: String, levelOpt: Option[Level]) {
 
         val byteOutStream = new ByteArrayOutputStream
         val logger = getLogger("test")   
 
+        val rootLogger = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME).asInstanceOf[ch.qos.logback.classic.Logger]
+
         {
-            val rootLogger = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME).asInstanceOf[ch.qos.logback.classic.Logger]
             val loggerContext = rootLogger.getLoggerContext()
             loggerContext.reset 
 
@@ -46,14 +47,83 @@ class HZUtilTest extends FunSuite {
 
             val logbackLogger = logger.asInstanceOf[ch.qos.logback.classic.Logger]
             logbackLogger.addAppender(appender)
-            logbackLogger.setLevel(level)
+            levelOpt match {
+                case Some(level) => logbackLogger.setLevel(level)
+                case None        => /* Nothing to do. */
+            }
         }
 
         def getLog: String = new String(byteOutStream.toByteArray)
+
+        def getRootLoggerLevel: ch.qos.logback.classic.Level = rootLogger.getLevel
+    }
+
+    test("HZLog.rootLoggerLevel2xxx().01") {
+        val test_logger = TestLogger("HZLog.rootLoggerLevel2xxx().01", None)
+        implicit val logger = test_logger.logger
+
+        rootLoggerLevel2Trace()
+        log_trace("Levele.TRACE + " + "log_trace()")
+        assertResult("TRACE - Levele.TRACE + log_trace()\r\n")(test_logger.getLog)
+
+        test_logger.byteOutStream.reset
+        rootLoggerLevel2Debug()
+        log_trace("Levele.DEBUG + " + "log_trace()")
+        assertResult("")(test_logger.getLog)
+
+        test_logger.byteOutStream.reset
+        log_debug("Levele.DEBUG + " + "log_debug()")
+        assertResult("DEBUG - Levele.DEBUG + log_debug()\r\n")(test_logger.getLog)
+
+        test_logger.byteOutStream.reset
+        rootLoggerLevel2Info()
+        log_debug("Levele.INFO + " + "log_debug()")
+        assertResult("")(test_logger.getLog)
+
+        test_logger.byteOutStream.reset
+        log_info("Levele.INFO + " + "log_info()")
+        assertResult("INFO  - Levele.INFO + log_info()\r\n")(test_logger.getLog)
+
+        test_logger.byteOutStream.reset
+        rootLoggerLevel2Error()
+        log_debug("Levele.Error + " + "log_debug()")
+        assertResult("")(test_logger.getLog)
+    }
+
+    test("HZLog.loggerLevel2xxx().01") {
+        val test_logger = TestLogger("HZLog.loggerLevel2xxx().01", Some(Level.TRACE))
+        implicit val logger = test_logger.logger
+
+        loggerLevel2Trace()
+        log_trace("Levele.TRACE + " + "log_trace()")
+        assertResult("TRACE - Levele.TRACE + log_trace()\r\n")(test_logger.getLog)
+
+        test_logger.byteOutStream.reset
+        loggerLevel2Debug()
+        log_trace("Levele.DEBUG + " + "log_trace()")
+        assertResult("")(test_logger.getLog)
+
+        test_logger.byteOutStream.reset
+        log_debug("Levele.DEBUG + " + "log_debug()")
+        assertResult("DEBUG - Levele.DEBUG + log_debug()\r\n")(test_logger.getLog)
+
+        test_logger.byteOutStream.reset
+        loggerLevel2Info()
+        log_debug("Levele.INFO + " + "log_debug()")
+        assertResult("")(test_logger.getLog)
+
+        test_logger.byteOutStream.reset
+        log_info("Levele.INFO + " + "log_info()")
+        assertResult("INFO  - Levele.INFO + log_info()\r\n")(test_logger.getLog)
+
+        test_logger.byteOutStream.reset
+        loggerLevel2Error()
+        log_debug("Levele.Error + " + "log_debug()")
+        assertResult("")(test_logger.getLog)
     }
 
     test("HZLog.log_info(msg).01") {
-        val test_logger = TestLogger("HZLog.log_info(msg).01", Level.INFO)
+        val test_logger = TestLogger("HZLog.log_info(msg).01", Some(Level.INFO))
         implicit val logger = test_logger.logger
 
         log_info("this is " + "test log_info(msg)" + " 01")
@@ -63,7 +133,7 @@ class HZUtilTest extends FunSuite {
     }
 
     test("HZLog.log_debug(msg).01") {
-        val test_logger = TestLogger("HZLog.log_debug(msg).01", Level.INFO)
+        val test_logger = TestLogger("HZLog.log_debug(msg).01", Some(Level.INFO))
         implicit val logger = test_logger.logger
 
         var debug_count = 0
@@ -78,7 +148,7 @@ class HZUtilTest extends FunSuite {
     }
 
     test("HZLog.l_t(msg).01") {
-        val test_logger = TestLogger("HZLog.l_t(msg).01", Level.INFO)
+        val test_logger = TestLogger("HZLog.l_t(msg).01", Some(Level.INFO))
         implicit val logger = test_logger.logger
 
         l_t("this is " + "test l_t(msg) 01")
@@ -86,7 +156,7 @@ class HZUtilTest extends FunSuite {
     }
 
     test("HZLog.l_t(msg).02") {
-        val test_logger = TestLogger("HZLog.l_t(msg).02", Level.TRACE)
+        val test_logger = TestLogger("HZLog.l_t(msg).02", Some(Level.TRACE))
         implicit val logger = test_logger.logger
 
         val ste = new Throwable().getStackTrace().apply(0)

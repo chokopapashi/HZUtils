@@ -39,6 +39,24 @@ object HZLog {
     def getLogger(loggerName: String): Logger = LoggerFactory.getLogger(loggerName)
     def getLogger(cls: Class[_]): Logger = LoggerFactory.getLogger(cls)
 
+    def rootLoggerLevelConcrete(level: Level) {
+        val rootLogger = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME).asInstanceOf[ch.qos.logback.classic.Logger]
+        rootLogger.setLevel(level)
+    }
+    def rootLoggerLevel2Info()  = rootLoggerLevelConcrete(Level.INFO)
+    def rootLoggerLevel2Error() = rootLoggerLevelConcrete(Level.ERROR)
+    def rootLoggerLevel2Debug() = rootLoggerLevelConcrete(Level.DEBUG)
+    def rootLoggerLevel2Trace() = rootLoggerLevelConcrete(Level.TRACE)
+
+    def loggerLevelConcrete(level: Level, logger: Logger) {
+        val logbackLogger = logger.asInstanceOf[ch.qos.logback.classic.Logger]
+        logbackLogger.setLevel(level)
+    }
+    def loggerLevel2Info()(implicit logger: Logger)  = loggerLevelConcrete(Level.INFO, logger)
+    def loggerLevel2Error()(implicit logger: Logger) = loggerLevelConcrete(Level.ERROR, logger)
+    def loggerLevel2Debug()(implicit logger: Logger) = loggerLevelConcrete(Level.DEBUG, logger)
+    def loggerLevel2Trace()(implicit logger: Logger) = loggerLevelConcrete(Level.TRACE, logger)
+
     private def checkAndlog(level: Level, f: (Logger) => Unit)(implicit logger: Logger) =
         if(level.isGreaterOrEqual(logger.asInstanceOf[ch.qos.logback.classic.Logger].getEffectiveLevel)) f(logger)
 
