@@ -7,9 +7,12 @@ import java.nio.ByteBuffer
 import org.scalatest.FunSuite
 
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder
+import ch.qos.logback.classic.filter.ThresholdFilter
 import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.LoggerContext
 import ch.qos.logback.classic.spi.ILoggingEvent
-
+import ch.qos.logback.core.filter.Filter
+import ch.qos.logback.core.encoder.Encoder
 import ch.qos.logback.core.OutputStreamAppender
 
 import org.slf4j.Logger
@@ -20,42 +23,71 @@ import org.hirosezouen.hzutil.HZByteBufferUtil._
 
 class HZUtilTest extends FunSuite {
 
-    case class TestLogger(name: String, levelOpt: Option[Level]) {
+    case class TestLogger(name: String, levelOpt: Option[Level], filterLevelOpt: Option[Level] = None) {
 
         val byteOutStream = new ByteArrayOutputStream
+        val rootByteOutStream = new ByteArrayOutputStream
         val logger = getLogger("test")   
-
         val rootLogger = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME).asInstanceOf[ch.qos.logback.classic.Logger]
+
+        def newEncoder(context: LoggerContext) = {
+            val encoder = new PatternLayoutEncoder();
+            encoder.setContext(context)
+            encoder.setPattern("%-5level - %message%n")
+            encoder.start()
+            encoder
+        }
+
+        def newAppender(context: LoggerContext, encoder: PatternLayoutEncoder, baos: ByteArrayOutputStream) = {
+            val appender = new OutputStreamAppender[ILoggingEvent]
+            appender.setName("TestAppender")
+            appender.setContext(context)
+            appender.setEncoder(encoder)
+            appender.setOutputStream(baos)
+            filterLevelOpt match {
+                case Some(level) => {
+                    val filter = new ThresholdFilter()
+                    filter.setName("TestFilter")
+                    filter.setLevel(level.toString)
+                    filter.start
+                    appender.addFilter(filter)
+                }
+                case _ => /* Nothing to do. */
+            }
+            appender.start
+            appender
+        }
 
         {
             val loggerContext = rootLogger.getLoggerContext()
             loggerContext.reset 
 
-            val encoder = new PatternLayoutEncoder();
-            encoder.setContext(loggerContext)
-            encoder.setPattern("%-5level - %message%n")
-            encoder.start()
+            {
+                val appender = newAppender(loggerContext, newEncoder(loggerContext), rootByteOutStream)
+                rootLogger.addAppender(appender)
+                levelOpt match {
+                    case Some(level) => rootLogger.setLevel(level)
+                    case None        => /* Nothing to do. */
+                }
+            }
 
-            val appender = new OutputStreamAppender[ILoggingEvent]
-            appender.setContext(loggerContext)
-            appender.setEncoder(encoder)
-            appender.setOutputStream(byteOutStream)
-            appender.start
-
-//            rootLogger.addAppender(appender)
-//            rootLogger.setLevel(level)
-
-            val logbackLogger = logger.asInstanceOf[ch.qos.logback.classic.Logger]
-            logbackLogger.addAppender(appender)
-            levelOpt match {
-                case Some(level) => logbackLogger.setLevel(level)
-                case None        => /* Nothing to do. */
+            {
+                val appender = newAppender(loggerContext, newEncoder(loggerContext), byteOutStream)
+                val logbackLogger = logger.asInstanceOf[ch.qos.logback.classic.Logger]
+                logbackLogger.addAppender(appender)
+                levelOpt match {
+                    case Some(level) => logbackLogger.setLevel(level)
+                    case None        => /* Nothing to do. */
+                }
             }
         }
 
         def getLog: String = new String(byteOutStream.toByteArray)
-
-        def getRootLoggerLevel: ch.qos.logback.classic.Level = rootLogger.getLevel
+        def getRootLog: String = new String(rootByteOutStream.toByteArray)
+        def resetLog = {
+            byteOutStream.reset
+            rootByteOutStream.reset
+        }
     }
 
     test("HZLog.rootLoggerLevel2xxx().01") {
@@ -64,30 +96,30 @@ class HZUtilTest extends FunSuite {
 
         rootLoggerLevel2Trace()
         log_trace("Levele.TRACE + " + "log_trace()")
-        assertResult("TRACE - Levele.TRACE + log_trace()\r\n")(test_logger.getLog)
+        assertResult("TRACE - Levele.TRACE + log_trace()\r\n")(test_logger.getRootLog)
 
-        test_logger.byteOutStream.reset
+        test_logger.resetLog
         rootLoggerLevel2Debug()
         log_trace("Levele.DEBUG + " + "log_trace()")
-        assertResult("")(test_logger.getLog)
+        assertResult("")(test_logger.getRootLog)
 
-        test_logger.byteOutStream.reset
+        test_logger.resetLog
         log_debug("Levele.DEBUG + " + "log_debug()")
-        assertResult("DEBUG - Levele.DEBUG + log_debug()\r\n")(test_logger.getLog)
+        assertResult("DEBUG - Levele.DEBUG + log_debug()\r\n")(test_logger.getRootLog)
 
-        test_logger.byteOutStream.reset
+        test_logger.resetLog
         rootLoggerLevel2Info()
         log_debug("Levele.INFO + " + "log_debug()")
-        assertResult("")(test_logger.getLog)
+        assertResult("")(test_logger.getRootLog)
 
-        test_logger.byteOutStream.reset
+        test_logger.resetLog
         log_info("Levele.INFO + " + "log_info()")
-        assertResult("INFO  - Levele.INFO + log_info()\r\n")(test_logger.getLog)
+        assertResult("INFO  - Levele.INFO + log_info()\r\n")(test_logger.getRootLog)
 
-        test_logger.byteOutStream.reset
+        test_logger.resetLog
         rootLoggerLevel2Error()
         log_debug("Levele.Error + " + "log_debug()")
-        assertResult("")(test_logger.getLog)
+        assertResult("")(test_logger.getRootLog)
     }
 
     test("HZLog.loggerLevel2xxx().01") {
@@ -98,26 +130,90 @@ class HZUtilTest extends FunSuite {
         log_trace("Levele.TRACE + " + "log_trace()")
         assertResult("TRACE - Levele.TRACE + log_trace()\r\n")(test_logger.getLog)
 
-        test_logger.byteOutStream.reset
+        test_logger.resetLog
         loggerLevel2Debug()
         log_trace("Levele.DEBUG + " + "log_trace()")
         assertResult("")(test_logger.getLog)
 
-        test_logger.byteOutStream.reset
+        test_logger.resetLog
         log_debug("Levele.DEBUG + " + "log_debug()")
         assertResult("DEBUG - Levele.DEBUG + log_debug()\r\n")(test_logger.getLog)
 
-        test_logger.byteOutStream.reset
+        test_logger.resetLog
         loggerLevel2Info()
         log_debug("Levele.INFO + " + "log_debug()")
         assertResult("")(test_logger.getLog)
 
-        test_logger.byteOutStream.reset
+        test_logger.resetLog
         log_info("Levele.INFO + " + "log_info()")
         assertResult("INFO  - Levele.INFO + log_info()\r\n")(test_logger.getLog)
 
-        test_logger.byteOutStream.reset
+        test_logger.resetLog
         loggerLevel2Error()
+        log_debug("Levele.Error + " + "log_debug()")
+        assertResult("")(test_logger.getLog)
+    }
+
+    test("HZLog.rootAppenderFilterLevel2xxx().01") {
+        val test_logger = TestLogger("HZLog.rootAppenderFilterLevel2xxx().01", Some(Level.TRACE), Some(Level.INFO))
+        implicit val logger = test_logger.logger
+
+        rootAppenderFilterLevel2Trace("TestAppender", "TestFilter")
+        log_trace("Levele.TRACE + " + "log_trace()")
+        assertResult("TRACE - Levele.TRACE + log_trace()\r\n")(test_logger.getRootLog)
+
+        test_logger.resetLog
+        rootAppenderFilterLevel2Debug("TestAppender", "TestFilter")
+        log_trace("Levele.DEBUG + " + "log_trace()")
+        assertResult("")(test_logger.getRootLog)
+
+        test_logger.resetLog
+        log_debug("Levele.DEBUG + " + "log_debug()")
+        assertResult("DEBUG - Levele.DEBUG + log_debug()\r\n")(test_logger.getRootLog)
+
+        test_logger.resetLog
+        rootAppenderFilterLevel2Info("TestAppender", "TestFilter")
+        log_debug("Levele.INFO + " + "log_debug()")
+        assertResult("")(test_logger.getRootLog)
+
+        test_logger.resetLog
+        log_info("Levele.INFO + " + "log_info()")
+        assertResult("INFO  - Levele.INFO + log_info()\r\n")(test_logger.getRootLog)
+
+        test_logger.resetLog
+        rootAppenderFilterLevel2Error("TestAppender", "TestFilter")
+        log_debug("Levele.Error + " + "log_debug()")
+        assertResult("")(test_logger.getRootLog)
+    }
+
+    test("HZLog.appenderFilterLevel2xxx().01") {
+        val test_logger = TestLogger("HZLog.appenderFilterLevel2xxx().01", Some(Level.TRACE), Some(Level.INFO))
+        implicit val logger = test_logger.logger
+
+        appenderFilterLevel2Trace("TestAppender", "TestFilter")
+        log_trace("Levele.TRACE + " + "log_trace()")
+        assertResult("TRACE - Levele.TRACE + log_trace()\r\n")(test_logger.getLog)
+
+        test_logger.resetLog
+        appenderFilterLevel2Debug("TestAppender", "TestFilter")
+        log_trace("Levele.DEBUG + " + "log_trace()")
+        assertResult("")(test_logger.getLog)
+
+        test_logger.resetLog
+        log_debug("Levele.DEBUG + " + "log_debug()")
+        assertResult("DEBUG - Levele.DEBUG + log_debug()\r\n")(test_logger.getLog)
+
+        test_logger.resetLog
+        appenderFilterLevel2Info("TestAppender", "TestFilter")
+        log_debug("Levele.INFO + " + "log_debug()")
+        assertResult("")(test_logger.getLog)
+
+        test_logger.resetLog
+        log_info("Levele.INFO + " + "log_info()")
+        assertResult("INFO  - Levele.INFO + log_info()\r\n")(test_logger.getLog)
+
+        test_logger.resetLog
+        appenderFilterLevel2Error("TestAppender", "TestFilter")
         log_debug("Levele.Error + " + "log_debug()")
         assertResult("")(test_logger.getLog)
     }

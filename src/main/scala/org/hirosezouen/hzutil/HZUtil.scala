@@ -22,11 +22,13 @@ import java.nio.ByteBuffer
 import java.util.Properties
 
 import scala.collection.mutable
+import scala.collection.JavaConversions._
 import scala.io.Source
 import scala.reflect.runtime.{universe => ru}
 import scala.util.control.Exception._
 
 import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.filter.ThresholdFilter
 
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -39,6 +41,8 @@ object HZLog {
     def getLogger(loggerName: String): Logger = LoggerFactory.getLogger(loggerName)
     def getLogger(cls: Class[_]): Logger = LoggerFactory.getLogger(cls)
 
+    /* -------------------------------------------------------------------- */
+
     def rootLoggerLevelConcrete(level: Level) {
         val rootLogger = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME).asInstanceOf[ch.qos.logback.classic.Logger]
         rootLogger.setLevel(level)
@@ -48,14 +52,47 @@ object HZLog {
     def rootLoggerLevel2Debug() = rootLoggerLevelConcrete(Level.DEBUG)
     def rootLoggerLevel2Trace() = rootLoggerLevelConcrete(Level.TRACE)
 
+    /* -------------------------------------------------------------------- */
+
     def loggerLevelConcrete(level: Level, logger: Logger) {
         val logbackLogger = logger.asInstanceOf[ch.qos.logback.classic.Logger]
         logbackLogger.setLevel(level)
     }
-    def loggerLevel2Info()(implicit logger: Logger)  = loggerLevelConcrete(Level.INFO, logger)
+    def loggerLevel2Info()(implicit logger: Logger)  = loggerLevelConcrete(Level.INFO,  logger)
     def loggerLevel2Error()(implicit logger: Logger) = loggerLevelConcrete(Level.ERROR, logger)
     def loggerLevel2Debug()(implicit logger: Logger) = loggerLevelConcrete(Level.DEBUG, logger)
     def loggerLevel2Trace()(implicit logger: Logger) = loggerLevelConcrete(Level.TRACE, logger)
+
+    /* -------------------------------------------------------------------- */
+
+    def rootAppenderFilterLevelConcrete(appenderName: String, filterName: String, level: Level) {
+        val rootLogger = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME).asInstanceOf[ch.qos.logback.classic.Logger]
+        val appender = rootLogger.getAppender(appenderName)
+        appender.getCopyOfAttachedFiltersList().foreach {
+            case (f: ThresholdFilter) if(f.getName == filterName) => f.setLevel(level.toString)
+            case _ => /* Nothing to do */
+        }
+    }
+    def rootAppenderFilterLevel2Info(aName: String, fName: String)(implicit logger: Logger)  = rootAppenderFilterLevelConcrete(aName, fName, Level.INFO)
+    def rootAppenderFilterLevel2Error(aName: String, fName: String)(implicit logger: Logger) = rootAppenderFilterLevelConcrete(aName, fName, Level.ERROR)
+    def rootAppenderFilterLevel2Debug(aName: String, fName: String)(implicit logger: Logger) = rootAppenderFilterLevelConcrete(aName, fName, Level.DEBUG)
+    def rootAppenderFilterLevel2Trace(aName: String, fName: String)(implicit logger: Logger) = rootAppenderFilterLevelConcrete(aName, fName, Level.TRACE)
+
+    /* -------------------------------------------------------------------- */
+
+    def appenderFilterLevelConcrete(appenderName: String, filterName: String, level: Level, logger: Logger) {
+        val appender = logger.asInstanceOf[ch.qos.logback.classic.Logger].getAppender(appenderName)
+        appender.getCopyOfAttachedFiltersList().foreach {
+            case (f: ThresholdFilter) if(f.getName == filterName) => f.setLevel(level.toString)
+            case _ => /* Nothing to do */
+        }
+    }
+    def appenderFilterLevel2Info(aName: String, fName: String)(implicit logger: Logger)  = appenderFilterLevelConcrete(aName, fName, Level.INFO,  logger)
+    def appenderFilterLevel2Error(aName: String, fName: String)(implicit logger: Logger) = appenderFilterLevelConcrete(aName, fName, Level.ERROR, logger)
+    def appenderFilterLevel2Debug(aName: String, fName: String)(implicit logger: Logger) = appenderFilterLevelConcrete(aName, fName, Level.DEBUG, logger)
+    def appenderFilterLevel2Trace(aName: String, fName: String)(implicit logger: Logger) = appenderFilterLevelConcrete(aName, fName, Level.TRACE, logger)
+
+    /* -------------------------------------------------------------------- */
 
     private def checkAndlog(level: Level, f: (Logger) => Unit)(implicit logger: Logger) =
         if(level.isGreaterOrEqual(logger.asInstanceOf[ch.qos.logback.classic.Logger].getEffectiveLevel)) f(logger)
