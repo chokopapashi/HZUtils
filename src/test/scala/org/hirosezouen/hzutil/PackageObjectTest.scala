@@ -20,9 +20,9 @@ class PackageObjectTest extends FunSuite {
         assertResult(0x00000000FEDCBA98L)(unsignedBingEndianIntBytes2Long(Array[Byte](0xFE.toByte,0xDC.toByte,0xBA.toByte,0x98.toByte)))
     }
 
-    test("log2unsignedBigEndianIntBytes") {
-        assert(Array[Byte](0xAB.toByte,0xCD.toByte,0xEF.toByte,0x12.toByte) sameElements log2unsignedBigEndianIntBytes(0x00000000ABCDEF12L.toInt))
-        assert(Array[Byte](0xFE.toByte,0xDC.toByte,0xBA.toByte,0x98.toByte) sameElements log2unsignedBigEndianIntBytes(0x00000000FEDCBA98L.toInt))
+    test("long2unsignedBigEndianIntBytes") {
+        assert(Array[Byte](0xAB.toByte,0xCD.toByte,0xEF.toByte,0x12.toByte) sameElements long2unsignedBigEndianIntBytes(0x00000000ABCDEF12L.toInt))
+        assert(Array[Byte](0xFE.toByte,0xDC.toByte,0xBA.toByte,0x98.toByte) sameElements long2unsignedBigEndianIntBytes(0x00000000FEDCBA98L.toInt))
     }
 
     test("hexDump") {

@@ -32,7 +32,7 @@ package object hzutil {
         ((ab(2) <<  8) & 0x000000000000ff00L).toLong |
          (ab(3) & 0x00000000000000ffL).toLong
 
-    def log2unsignedBigEndianIntBytes(l: Long): Array[Byte] = {
+    def long2unsignedBigEndianIntBytes(l: Long): Array[Byte] = {
         val ab = new Array[Byte](4)
         ab(0) = ((l >> 24) & 0x00000000000000ffL).toByte
         ab(1) = ((l >> 16) & 0x00000000000000ffL).toByte
