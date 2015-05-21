@@ -19,9 +19,6 @@ lazy val root = (project in file(".")).
         // set the name of the project
         name := "HZUtil",
 
-        // Actor of Ver2.10.1-> requires to add libraryDependencies explicitly
-        libraryDependencies <+= scalaVersion { "org.scala-lang" % "scala-actors" % _ },
-
         // Reflect of Ver2.10.1-> requires to add libraryDependencies explicitly
         libraryDependencies <+= scalaVersion { "org.scala-lang" % "scala-reflect" % _ },
 
