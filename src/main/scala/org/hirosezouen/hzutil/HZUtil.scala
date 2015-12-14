@@ -129,10 +129,10 @@ object HZIO {
         r.close()
     }
 
-    def using[A](r: OutputStream)(f: OutputStream => A): A = try {
-        f(r)
+    def using[A](w: OutputStream)(f: OutputStream => Unit): Unit = try {
+        f(w)
     } finally {
-        r.close()
+        w.close()
     }
 
     def using[A](r: Source)(f: Source => A): A = try {
@@ -147,10 +147,10 @@ object HZIO {
         r.close()
     }
  
-    def using[A](r: Writer)(f: Writer => A): A = try {
-        f(r)
+    def using[A](w: Writer)(f: Writer => Unit): Unit = try {
+        f(w)
     } finally {
-        r.close()
+        w.close()
     }
 }
 
