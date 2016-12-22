@@ -22,7 +22,7 @@ import java.nio.ByteBuffer
 import java.util.Properties
 
 import scala.collection.mutable
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.io.Source
 import scala.reflect.runtime.{universe => ru}
 import scala.util.control.Exception._
@@ -68,7 +68,7 @@ object HZLog {
     def rootAppenderFilterLevelConcrete(appenderName: String, filterName: String, level: Level) {
         val rootLogger = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME).asInstanceOf[ch.qos.logback.classic.Logger]
         val appender = rootLogger.getAppender(appenderName)
-        appender.getCopyOfAttachedFiltersList().foreach {
+        appender.getCopyOfAttachedFiltersList.asScala.foreach {
             case (f: ThresholdFilter) if(f.getName == filterName) => f.setLevel(level.toString)
             case _ => /* Nothing to do */
         }
@@ -82,7 +82,7 @@ object HZLog {
 
     def appenderFilterLevelConcrete(appenderName: String, filterName: String, level: Level, logger: Logger) {
         val appender = logger.asInstanceOf[ch.qos.logback.classic.Logger].getAppender(appenderName)
-        appender.getCopyOfAttachedFiltersList().foreach {
+        appender.getCopyOfAttachedFiltersList.asScala.foreach {
             case (f: ThresholdFilter) if(f.getName == filterName) => f.setLevel(level.toString)
             case _ => /* Nothing to do */
         }
