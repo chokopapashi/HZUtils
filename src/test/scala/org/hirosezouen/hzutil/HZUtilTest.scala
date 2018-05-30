@@ -455,8 +455,8 @@ class HZUtilTest extends FunSuite {
 
         val dBuffer = getBufferFromBuffer(2,5)
         dBuffer.clear
-        assertResult(3)(dBuffer.limit)
-        assertResult(3)(dBuffer.capacity)
+        assertResult(3)(dBuffer.limit())
+        assertResult(3)(dBuffer.capacity())
 
         assertResult(0xEF.toByte)(dBuffer.get(0))
         assertResult(0x01.toByte)(dBuffer.get(1))

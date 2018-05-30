@@ -400,8 +400,8 @@ object HZByteBufferUtil {
     def putBufferToBuffer(dStart: Int, dEnd: Int, sBuffer: ByteBuffer, _sStart: Int = -1, _sEnd: Int = -1)
                          (implicit dBuffer: ByteBuffer)
     {
-        val sStart = if(_sStart == -1) sBuffer.position else _sStart
-        val sEnd = if(_sEnd == -1) sBuffer.limit else _sEnd
+        val sStart = if(_sStart == -1) sBuffer.position() else _sStart
+        val sEnd = if(_sEnd == -1) sBuffer.limit() else _sEnd
         val dLen = dEnd - dStart
         val sLen = sEnd - sStart
         assert(dLen == sLen, f"putBufferToBuffer:expect=${dLen}%d,actual=${sLen}%d")
@@ -420,11 +420,11 @@ object HZByteBufferUtil {
         assert(sBuffer != null, f"getBufferFromBuffer:sBuffer == null")
 
         sBuffer.clear
-        val sLen = sBuffer.limit - sBuffer.position
+        val sLen = sBuffer.limit() - sBuffer.position()
         val dLen = end - start
 
         assert(start <= end, f"getBufferFromBuffer:${end} < ${start}")
-        assert(end <= sBuffer.limit, f"getBufferFromBuffer:${sBuffer.limit} < ${end}")
+        assert(end <= sBuffer.limit(), f"getBufferFromBuffer:${sBuffer.limit()} < ${end}")
 
         sBuffer.position(start)
         sBuffer.limit(end)

@@ -9,8 +9,8 @@
 // factor out common settings into a sequence
 lazy val commonSettings = Seq(
     organization := "org.hirosezouen",
-    version      := "2.2.0",
-    scalaVersion := "2.12.4"
+    version      := "2.3.0",
+    scalaVersion := "2.12.6"
 )
 
 lazy val root = (project in file(".")).
@@ -23,7 +23,7 @@ lazy val root = (project in file(".")).
         libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value,
 
         // add ScalaTest dependency
-        libraryDependencies += "org.scalatest" % "scalatest_2.12" % "3.0.4" % "test",
+        libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test",
 
         // add Logback, SLF4j dependencies
         libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.3",
